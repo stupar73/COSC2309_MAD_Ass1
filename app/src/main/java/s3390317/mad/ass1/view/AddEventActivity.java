@@ -1,8 +1,8 @@
 package s3390317.mad.ass1.view;
 
 import android.content.Intent;
-import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
@@ -11,6 +11,8 @@ import android.view.MenuItem;
 import android.widget.EditText;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 import s3390317.mad.ass1.R;
@@ -19,17 +21,17 @@ import s3390317.mad.ass1.controller.DatePickerDialogListener;
 import s3390317.mad.ass1.controller.TimePickerDialogListener;
 import s3390317.mad.ass1.model.Contact;
 import s3390317.mad.ass1.model.EventModel;
+import s3390317.mad.ass1.model.SimpleSocialEvent;
 import s3390317.mad.ass1.model.SocialEvent;
 import s3390317.mad.ass1.view.model.ContactDataManager;
+import s3390317.mad.ass1.view.model.ContactDataManager.ContactQueryException;
 import s3390317.mad.ass1.view.model.IntentRequestCodes;
 
-public class EditEventActivity extends AppCompatActivity
+public class AddEventActivity extends AppCompatActivity
 {
     private String LOG_TAG = this.getClass().getName();
 
     private EventModel model;
-    private String eventId;
-    private SocialEvent event;
     private EditText titleField;
     private EditText startDateField;
     private EditText startTimeField;
@@ -40,12 +42,14 @@ public class EditEventActivity extends AppCompatActivity
     private EditText noteField;
     private EditText attendeesField;
     private List<Contact> attendees;
+    private boolean dateWasPassed;
+    private Calendar datePassed;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
         super.onCreateOptionsMenu(menu);
-        getMenuInflater().inflate(R.menu.actions_edit_event, menu);
+        getMenuInflater().inflate(R.menu.actions_add_event, menu);
         return true;
     }
 
@@ -54,14 +58,11 @@ public class EditEventActivity extends AppCompatActivity
     {
         switch(item.getItemId())
         {
-            case R.id.edit_event_save:
-                saveChanges();
-                return true;
-            case R.id.edit_event_delete:
-                removeEvent();
+            case R.id.add_event_save:
+                addEvent();
                 return true;
             case android.R.id.home:
-                finish();
+                onBackPressed();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -72,62 +73,73 @@ public class EditEventActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_edit_event);
+        setContentView(R.layout.activity_add_event);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         // Change up indicator to a cross
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setHomeAsUpIndicator(
-                R.drawable.ic_close_white_24dp);
+        getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_close_white_24dp);
+
+        // Check if the parent activity passed a date as part of the intent
+        if (getIntent().getBooleanExtra("datePassed", false))
+        {
+            dateWasPassed = true;
+            Calendar today = Calendar.getInstance();
+
+            int day = getIntent().getIntExtra("day", today.get(Calendar.DAY_OF_MONTH));
+            int month = getIntent().getIntExtra("month", today.get(Calendar.MONTH));
+            int year = getIntent().getIntExtra("year", today.get(Calendar.YEAR));
+
+            datePassed = new GregorianCalendar(year, month, day);
+        }
 
         model = EventModel.getSingletonInstance();
 
-        Intent intent = getIntent();
-        eventId = intent.getStringExtra("eventId");
-
-        event = model.getEventById(eventId);
-
         attendees = new ArrayList<>();
 
-        populateFields();
+        assignUiElements();
     }
 
-    private void populateFields()
+    private void assignUiElements()
     {
-        titleField = (EditText) findViewById(R.id.edit_event_title_field);
-        titleField.setText(event.getTitle());
+        titleField = (EditText) findViewById(R.id.add_event_title_field);
 
-        startDateField = (EditText) findViewById(R.id.edit_event_start_date_field);
-        startDateField.setText(event.getStartDateString());
-        new DatePickerDialogListener(this, startDateField);
+        startDateField = (EditText) findViewById(R.id.add_event_start_date_field);
+        if (dateWasPassed)
+        {
+            new DatePickerDialogListener(this, startDateField, datePassed);
+        }
+        else
+        {
+            new DatePickerDialogListener(this, startDateField);
+        }
 
-        startTimeField = (EditText) findViewById(R.id.edit_event_start_time_field);
-        startTimeField.setText(event.getStartTimeString());
+        startTimeField = (EditText) findViewById(R.id.add_event_start_time_field);
         new TimePickerDialogListener(this, startTimeField);
 
-        endDateField = (EditText) findViewById(R.id.edit_event_end_date_field);
-        endDateField.setText(event.getEndDateString());
-        new DatePickerDialogListener(this, endDateField);
+        endDateField = (EditText) findViewById(R.id.add_event_end_date_field);
+        if (dateWasPassed)
+        {
+            new DatePickerDialogListener(this, endDateField, datePassed);
+        }
+        else
+        {
+            new DatePickerDialogListener(this, endDateField);
+        }
 
-        endTimeField = (EditText) findViewById(R.id.edit_event_end_time_field);
-        endTimeField.setText(event.getEndTimeString());
+        endTimeField = (EditText) findViewById(R.id.add_event_end_time_field);
         new TimePickerDialogListener(this, endTimeField);
 
-        venueField = (EditText) findViewById(R.id.edit_event_venue_field);
-        venueField.setText(event.getVenue());
+        venueField = (EditText) findViewById(R.id.add_event_venue_field);
 
-        locationField = (EditText) findViewById(R.id.edit_event_location_field);
-        locationField.setText(event.getLocation());
+        locationField = (EditText) findViewById(R.id.add_event_location_field);
 
-        noteField = (EditText) findViewById(R.id.edit_event_note_field);
-        noteField.setText(event.getNote());
+        noteField = (EditText) findViewById(R.id.add_event_note_field);
 
-        attendeesField = (EditText) findViewById(R.id.edit_event_attendees_field);
+        attendeesField = (EditText) findViewById(R.id.add_event_attendees_field);
         attendeesField.setOnClickListener(new ContactPickerListener(this));
-        attendees.addAll(event.getAttendees());
-        updateAttendeesField();
     }
 
     @Override
@@ -146,7 +158,7 @@ public class EditEventActivity extends AppCompatActivity
                     name = contactsManager.getContactName();
                     email = contactsManager.getContactEmail();
                 }
-                catch (ContactDataManager.ContactQueryException e)
+                catch (ContactQueryException e)
                 {
                     Log.e(LOG_TAG, e.getMessage());
                 }
@@ -172,37 +184,31 @@ public class EditEventActivity extends AppCompatActivity
     }
 
     /**
-     * Save changes made to the event to the model. <br>
+     * Add the event to the model. <br>
      * NOTE: No checking is being done to ensure fields have actually been
-     * populated.
+     * populated. Start and end date defaults to the current time and everything
+     * else defaults to empty strings.
      */
-    private void saveChanges()
+    private void addEvent()
     {
-        // Set all the fields of the event, even if they haven't all been changed
-        event.setTitle(titleField.getText().toString());
-        event.setStartDate(startDateField.getText().toString());
-        event.setStartTime(startTimeField.getText().toString());
-        event.setEndDate(endDateField.getText().toString());
-        event.setEndTime(endTimeField.getText().toString());
-        event.setVenue(venueField.getText().toString());
-        event.setLocation(locationField.getText().toString());
-        event.setNote(noteField.getText().toString());
-        event.setAttendees(attendees);
+        String title = titleField.getText().toString();
+        String startDateStr = startDateField.getText().toString();
+        String startTimeStr = startTimeField.getText().toString();
+        String endDateStr = endDateField.getText().toString();
+        String endTimeStr = endTimeField.getText().toString();
+        String venue = venueField.getText().toString();
+        String location = locationField.getText().toString();
+        String note = noteField.getText().toString();
 
-        // Let the parent know the event was modified
-        Intent returnIntent = new Intent();
-        returnIntent.putExtra("modified", true);
-        setResult(RESULT_OK, returnIntent);
-        finish();
-    }
+        SocialEvent event = new SimpleSocialEvent(title, startDateStr,
+                startTimeStr, endDateStr, endTimeStr, venue, location, note,
+                attendees);
 
-    /**
-     * Tell the parent activity that the event should be removed from the model.
-     */
-    private void removeEvent()
-    {
+        model.addEvent(event);
+
+        // Let the parent know that the event list may have changed
         Intent returnIntent = new Intent();
-        returnIntent.putExtra("remove", true);
+        returnIntent.putExtra("updateList", true);
         setResult(RESULT_OK, returnIntent);
         finish();
     }

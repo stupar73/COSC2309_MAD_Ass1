@@ -1,11 +1,14 @@
 package s3390317.mad.ass1.model;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
-/**
- * Created by Stuart on 17/08/2016.
- */
 public class SimpleSocialEvent implements SocialEvent
 {
     private String id;
@@ -15,12 +18,19 @@ public class SimpleSocialEvent implements SocialEvent
     private String venue;
     private String location;
     private String note;
-    private Collection<String> attendees;
+    private List<Contact> attendees;
+    private final DateFormat dateTimeFormat = new SimpleDateFormat(
+            "EEE, d MMM yyyy @ h:mm a", Locale.getDefault());
+    private final DateFormat dateFormat = new SimpleDateFormat("EEE, d MMM yyyy",
+            Locale.getDefault());
+    private final DateFormat timeFormat = new SimpleDateFormat("h:mm a",
+            Locale.getDefault());
 
-    public SimpleSocialEvent(String title, Calendar start, Calendar end, String venue,
-                             String location, String note, Collection<String> attendees)
+    public SimpleSocialEvent(String title, Calendar start, Calendar end,
+                             String venue, String location, String note,
+                             List<Contact> attendees)
     {
-        // TODO Generate id
+        this.id = UUID.randomUUID().toString();
         this.title = title;
         this.start = start;
         this.end = end;
@@ -28,6 +38,32 @@ public class SimpleSocialEvent implements SocialEvent
         this.location = location;
         this.note = note;
         this.attendees = attendees;
+    }
+
+    public SimpleSocialEvent(String title, String startDateStr,
+                             String startTimeStr, String endDateStr,
+                             String endTimeStr, String venue, String location,
+                             String note, List<Contact> attendees)
+    {
+        this.id = UUID.randomUUID().toString();
+        this.title = title;
+        this.start = Calendar.getInstance();
+        setStartDate(startDateStr);
+        setStartTime(startTimeStr);
+        this.end = Calendar.getInstance();
+        setEndDate(endDateStr);
+        setEndTime(endTimeStr);
+        this.venue = venue;
+        this.location = location;
+        this.note = note;
+        this.attendees = attendees;
+    }
+
+    @Override
+    public boolean finishesSameDay()
+    {
+        return (start.get(Calendar.DAY_OF_YEAR) == end.get(Calendar.DAY_OF_YEAR)
+                && start.get(Calendar.YEAR) == end.get(Calendar.YEAR));
     }
 
     @Override
@@ -55,9 +91,77 @@ public class SimpleSocialEvent implements SocialEvent
     }
 
     @Override
+    public String getStartString()
+    {
+        return dateTimeFormat.format(start.getTime());
+    }
+
+    @Override
+    public String getStartDateString()
+    {
+        return dateFormat.format(start.getTime());
+    }
+
+    @Override
+    public String getStartTimeString()
+    {
+        return timeFormat.format(start.getTime());
+    }
+
+    @Override
     public void setStart(Calendar start)
     {
         this.start = start;
+    }
+
+    @Override
+    public boolean setStartDate(String dateStr)
+    {
+        try
+        {
+            // Retrieve calendar object from passed string
+            Calendar newStartDate = Calendar.getInstance();
+            newStartDate.setTime(dateFormat.parse(dateStr));
+
+            // Update start date values
+            start.set(Calendar.DAY_OF_MONTH,
+                    newStartDate.get(Calendar.DAY_OF_MONTH));
+            start.set(Calendar.MONTH,
+                    newStartDate.get(Calendar.MONTH));
+            start.set(Calendar.YEAR,
+                    newStartDate.get(Calendar.YEAR));
+
+            return true;
+        }
+        catch (ParseException e)
+        {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean setStartTime(String timeStr)
+    {
+        try
+        {
+            // Retrieve calendar object from passed string
+            Calendar newStartTime = Calendar.getInstance();
+            newStartTime.setTime(timeFormat.parse(timeStr));
+
+            // Update start time values
+            start.set(Calendar.HOUR,
+                    newStartTime.get(Calendar.HOUR));
+            start.set(Calendar.MINUTE,
+                    newStartTime.get(Calendar.MINUTE));
+            start.set(Calendar.AM_PM,
+                    newStartTime.get(Calendar.AM_PM));
+
+            return true;
+        }
+        catch (ParseException e)
+        {
+            return false;
+        }
     }
 
     @Override
@@ -67,9 +171,77 @@ public class SimpleSocialEvent implements SocialEvent
     }
 
     @Override
+    public String getEndString()
+    {
+        return dateTimeFormat.format(end.getTime());
+    }
+
+    @Override
+    public String getEndDateString()
+    {
+        return dateFormat.format(end.getTime());
+    }
+
+    @Override
+    public String getEndTimeString()
+    {
+        return timeFormat.format(end.getTime());
+    }
+
+    @Override
     public void setEnd(Calendar end)
     {
         this.end = end;
+    }
+
+    @Override
+    public boolean setEndDate(String dateStr)
+    {
+        try
+        {
+            // Retrieve calendar object from passed string
+            Calendar newEndDate = Calendar.getInstance();
+            newEndDate.setTime(dateFormat.parse(dateStr));
+
+            // Update start date values
+            end.set(Calendar.DAY_OF_MONTH,
+                    newEndDate.get(Calendar.DAY_OF_MONTH));
+            end.set(Calendar.MONTH,
+                    newEndDate.get(Calendar.MONTH));
+            end.set(Calendar.YEAR,
+                    newEndDate.get(Calendar.YEAR));
+
+            return true;
+        }
+        catch (ParseException e)
+        {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean setEndTime(String timeStr)
+    {
+        try
+        {
+            // Retrieve calendar object from passed string
+            Calendar newEndTime = Calendar.getInstance();
+            newEndTime.setTime(timeFormat.parse(timeStr));
+
+            // Update start time values
+            end.set(Calendar.HOUR,
+                    newEndTime.get(Calendar.HOUR));
+            end.set(Calendar.MINUTE,
+                    newEndTime.get(Calendar.MINUTE));
+            end.set(Calendar.AM_PM,
+                    newEndTime.get(Calendar.AM_PM));
+
+            return true;
+        }
+        catch (ParseException e)
+        {
+            return false;
+        }
     }
 
     @Override
@@ -109,11 +281,26 @@ public class SimpleSocialEvent implements SocialEvent
     }
 
     @Override
-    public String toString()
+    public List<Contact> getAttendees()
     {
-        return "SimpleSocialEvent{" +
-                "title='" + title + '\'' +
-                ", start=" + start. +
-                '}';
+        return Collections.unmodifiableList(attendees);
+    }
+
+    @Override
+    public void setAttendees(List<Contact> attendees)
+    {
+        this.attendees = attendees;
+    }
+
+    @Override
+    public void addAttendee(Contact attendee)
+    {
+        this.attendees.add(attendee);
+    }
+
+    @Override
+    public int compareTo(SocialEvent e)
+    {
+        return start.compareTo(e.getStart());
     }
 }

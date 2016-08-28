@@ -2,41 +2,37 @@ package s3390317.mad.ass1.view;
 
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.GridView;
 import android.widget.ListView;
+
+import java.util.Calendar;
 
 import s3390317.mad.ass1.R;
 import s3390317.mad.ass1.controller.AddEventListener;
-import s3390317.mad.ass1.controller.EventMultiChoiceModeListener;
+import s3390317.mad.ass1.controller.CalendarGridItemLongPressedListener;
 import s3390317.mad.ass1.controller.NavigationItemSelectedListener;
-import s3390317.mad.ass1.controller.ViewEventListener;
+import s3390317.mad.ass1.controller.CalendarGridItemSelectedListener;
 import s3390317.mad.ass1.model.EventModel;
 import s3390317.mad.ass1.view.model.EventArrayAdapter;
 import s3390317.mad.ass1.view.model.IntentRequestCodes;
 
-public class EventListActivity extends AppCompatActivity
+public class CalendarActivity extends AppCompatActivity
 {
-
     private EventModel model;
-    private ListView eventList;
-    private EventArrayAdapter eventArrayAdapter;
     private ActionBarDrawerToggle drawerToggle;
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
-        super.onCreateOptionsMenu(menu);
-        getMenuInflater().inflate(R.menu.actions_event_list, menu);
-        return true;
-    }
+    private CalendarView calendarView;
+    private GridView calendarGrid;
+    private ListView eventList;
+    private EventArrayAdapter eventListAdapter;
+    private Calendar selectedDate;
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item)
@@ -47,50 +43,34 @@ public class EventListActivity extends AppCompatActivity
             return true;
         }
 
-        switch(item.getItemId())
-        {
-            case R.id.event_list_sort_asc:
-                sortEventsAscending();
-                item.setChecked(true);
-                return true;
-            case R.id.event_list_sort_desc:
-                sortEventsDescending();
-                item.setChecked(true);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_event_list);
+        setContentView(R.layout.activity_calendar);
 
         setUpActionBar();
         setUpNavDrawer();
         setUpFloatingActionButton();
 
-        model = EventModel.getSingletonInstance();
+        calendarView = (CalendarView) findViewById(R.id.calendar);
+        calendarGrid = (GridView) findViewById(R.id.calendar_grid);
+        eventList = (ListView) findViewById(R.id.calendar_event_list);
 
-        eventList = (ListView) findViewById(R.id.event_list_activity);
-
-        eventArrayAdapter = new EventArrayAdapter(
-                this,
-                R.layout.event_list_item,
-                true,
-                model,
-                model.getEventList()
-        );
-
-        eventList.setAdapter(eventArrayAdapter);
         eventList.setEmptyView(findViewById(R.id.empty_list_text));
-        eventList.setOnItemClickListener(new ViewEventListener(this,
-                eventArrayAdapter));
-        eventList.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
-        eventList.setMultiChoiceModeListener(new EventMultiChoiceModeListener(
-                this, eventList, eventArrayAdapter));
+
+        model = EventModel.getSingletonInstance();
+        calendarView.setModel(model);
+
+        calendarGrid.setOnItemClickListener(
+                new CalendarGridItemSelectedListener(
+                this, model, calendarView, eventList, eventListAdapter));
+
+        calendarGrid.setOnItemLongClickListener(
+                new CalendarGridItemLongPressedListener(this, calendarGrid));
     }
 
     private void setUpActionBar()
@@ -150,21 +130,18 @@ public class EventListActivity extends AppCompatActivity
             {
                 if (data.getBooleanExtra("updateList", false))
                 {
-                    eventArrayAdapter.notifyDataSetChanged();
+                    if (selectedDate != null
+                            && eventListAdapter != null)
+                    {
+                        eventListAdapter.clear();
+                        eventListAdapter.addAll(model.getEventsOnDay(
+                                selectedDate.get(Calendar.DAY_OF_MONTH),
+                                selectedDate.get(Calendar.MONTH),
+                                selectedDate.get(Calendar.YEAR)));
+                        eventListAdapter.notifyDataSetChanged();
+                    }
                 }
             }
         }
-    }
-
-    private void sortEventsAscending()
-    {
-        model.sortEventsAscending();
-        eventArrayAdapter.notifyDataSetChanged();
-    }
-
-    private void sortEventsDescending()
-    {
-        model.sortEventsDescending();
-        eventArrayAdapter.notifyDataSetChanged();
     }
 }
