@@ -24,7 +24,6 @@ import s3390317.mad.ass1.view.model.IntentRequestCodes;
 
 public class EventListActivity extends AppCompatActivity
 {
-
     private EventModel model;
     private ListView eventList;
     private EventArrayAdapter eventArrayAdapter;
